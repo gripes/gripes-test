@@ -1,4 +1,4 @@
-### Most Basic Steps:
+### Basic Steps:
 1. Clone this repository
 3. Run: `./gradlew init`
 4. Gripes will create a `conf/gripes-basic.gradle` file, edit the gripes{} section if needed
