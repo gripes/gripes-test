@@ -4,16 +4,24 @@ apply {
 	plugin 'groovy'
 	plugin 'eclipse'
 	plugin 'war'
- 	plugin 'gripes'
+	plugin 'gripes'
 }
 
-if(file("conf/gripes-basic.gradle").exists()) 
-  apply from: "conf/gripes-basic.gradle"
+repositories {
+	mavenCentral()
+	
+	mavenRepo name: 'gripes-project', url: 'http://www.gripes-project.org/libs'
+	
+	flatDir(dirs: file("../gripes-addon-example/repos"))
+}
 
+dependencies {
+	addons 'gripes-addons:gripes-addon-example:0.1.3'
+}
 buildscript {
 	versions = [
 	  	'gripes-web' : '0.1.9',
-	  	'gripes-plugin' : '0.1.11',
+	  	'gripes-plugin' : '0.1.15',
 	  	'gripersist' : '0.1.6',
 	  	'gripes-ast' : '0.1.0',
   		'hibernate-core' : '4.0.0.Beta2'
@@ -21,51 +29,55 @@ buildscript {
 	
 	project.getTasks().add([name: "gripes", type: GradleBuild]) {
 		buildFile = '../gripes-plugin/build.gradle'
-		tasks = ['pluginJar']
-//		tasks = ['pluginBuild']
+		tasks = ['pluginBuild'] // ['pluginJar']
 	}.execute()
 	
 	repositories {
-		mavenCentral()
-		
-		mavenRepo name: "jboss-snapshots", url: "http://snapshots.jboss.org/maven2/"
-		mavenRepo name: "jboss-public", url: "https://repository.jboss.org/nexus/content/groups/public/"
-		mavenRepo name: "atlassian", url: "https://maven.atlassian.com/content/groups/public/"
-		
 		add(new org.apache.ivy.plugins.resolver.FileSystemResolver()) {
 			name = 'GripesPlugin'
-			addArtifactPattern (file('..').canonicalPath+'/gripes-plugin/build/libs/[organisation]/[module]/[revision]/[module]-[revision].[ext]')
+            addIvyPattern (file('..').canonicalPath+'/gripes-plugin/repos/ivy-[revision].xml')
+			addArtifactPattern (file('..').canonicalPath+'/gripes-plugin/repos/[module]-[revision].[ext]')
+		}		
+		add(new org.apache.ivy.plugins.resolver.URLResolver()) {
+			name = 'GitHub'
+			addArtifactPattern 'http://cloud.github.com/downloads/[organisation]/[module]/[module]-[revision].[ext]'
 		}
 		
-//		add(new org.apache.ivy.plugins.resolver.URLResolver()) {
-//			name = 'GitHub'
-//				addArtifactPattern 'http://cloud.github.com/downloads/[organisation]/[module]/[module]-[revision].[ext]'
-//		}
+		mavenCentral()
+		mavenRepo name: "gripes-libs", url: "http://www.gripes-project.org/libs"
 	}
-
+	
 	dependencies {
-		classpath("gripes:gripes-plugin:${versions['gripes-plugin']}")
-		classpath group: 'org.hibernate', name: 'hibernate-core', version: versions['hibernate-core']
-		classpath group: 'org.hibernate', name: 'hibernate-entitymanager', version: versions['hibernate-core']
+		classpath(group: "gripes", name: "gripes-plugin", version: "latest.integration") {changing= true}
+	}
+	
+	configurations.all {
+		resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
 	}
 }
+//configurations.all {
+//	resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+//}
 
-eclipse {
-	classpath {
-		defaultOutputDir=file("bin/main")
-		file {
-			withXml {
-				def xml = it.asNode()
-				xml."classpathentry".findAll{it."@kind"=="src" && it."@path".find("test")}*."@output"="bin/test"
-			}
-			whenMerged { classpath ->
-				classpath.entries.removeAll(classpath.entries.findAll{((it instanceof SourceFolder) && it.dir==null)})
-			}
-		}
-	}
-}
-task eclipseCp(dependsOn: [eclipseClasspath]) {}
+//eclipse {
+//	classpath {
+//		defaultOutputDir=file("bin/main")
+//		file {
+//			withXml {
+//				def xml = it.asNode()
+//				xml."classpathentry".findAll{it."@kind"=="src" && it."@path".find("test")}*."@output"="bin/test"
+//			}
+//			whenMerged { classpath ->
+//				classpath.entries.removeAll(classpath.entries.findAll{((it instanceof SourceFolder) && it.dir==null)})
+//			}
+//		}
+//	}
+//}
+//task eclipseCp(dependsOn: [eclipseClasspath]) {}
 
+if(file("conf/gripes-basic.gradle").exists())
+  apply from: "conf/gripes-basic.gradle"
+  
 task wrapper(type: Wrapper) {
-	gradleVersion = '1.0-milestone-7'
+	gradleVersion = '1.0-milestone-8'
 }
